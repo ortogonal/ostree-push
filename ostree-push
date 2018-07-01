@@ -27,10 +27,12 @@ from gi.repository import GLib, Gio, OSTree
 
 import logging
 import os
+import os.path
 import struct
 import subprocess
 import sys
 from urllib.parse import urlparse
+from subprocess import Popen, PIPE
 
 PROTO_VERSION = 0
 HEADER_SIZE = 5
@@ -525,6 +527,15 @@ class OSTreeReceiver(object):
         for branch, revs in update_refs.items():
             logging.debug('Setting ref {} to {}'.format(branch, revs[1]))
             self.repo.set_ref_immediate(None, branch, revs[1], None)
+
+        # Run post-receive hoos, if any
+        if os.path.isfile(self.repopath + '/hooks/post-receive') and os.access(self.repopath + '/hooks/post-receive', os.X_OK):
+            logging.debug('Running post-receive hook');
+            p = Popen(self.repopath + '/hooks/post-receive', stdin=PIPE)
+            line = "{0} {1} {2}\n".format(revs[0], branch, revs[1]);
+            p.stdin.write(bytes(line, 'utf-8'))
+            p.stdin.close()
+            p.wait()
 
         return 0
 
