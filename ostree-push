@@ -433,14 +433,22 @@ class OSTreePusher(object):
         objects = self.needed_objects(commits)
 
         # Send all the objects to receiver, checking status after each
+        noObjects = len(objects)
+        i = 1;
         for obj in objects:
             self.writer.send_putobject(self.repo, obj)
             args = self.reader.receive_status()
             logging.debug('Received status {} for {}'
                           .format(args['result'], obj))
+            logLine = "  Sending objects ({0}/{1})\r".format(i, noObjects)
+            sys.stdout.write(logLine)
             if not args['result']:
                 self.writer.send_done()
                 raise PushException(args['message'])
+
+            i=i+1
+
+        print('');
 
         # Tell the receiver to exit
         self.writer.send_done()
